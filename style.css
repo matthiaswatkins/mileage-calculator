@@ -72,3 +72,29 @@ button:disabled {
   opacity: 0.6;
   cursor: default;
 }
+
+.day-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 0.5rem;
+}
+
+.day-list li {
+  margin-bottom: 0.4rem;
+}
+
+.showBreakdownBtn {
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: none;
+  background: #007aff;
+  color: #fff;
+  cursor: pointer;
+}
+
+.showBreakdownBtn:hover {
+  background: #005fcc;
+}
+
