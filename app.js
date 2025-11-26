@@ -82,18 +82,34 @@ const fallbackCache = {}; // "A|B" → miles
 // Fallback API lookup (slow, only you will use this)
 // ======================================================
 
+// Load persistent cache
+let fallbackCache = JSON.parse(localStorage.getItem("fallbackCache") || "{}");
+
+function saveFallbackCache() {
+  localStorage.setItem("fallbackCache", JSON.stringify(fallbackCache));
+}
+
 async function geocode(address) {
   const url =
     `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
-    `${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+    `${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&limit=5`;
 
   const rsp = await fetch(url);
   if (!rsp.ok) throw new Error("Geocode failed");
   const data = await rsp.json();
-  if (!data.features?.length) throw new Error("No geocode match");
-  const [lon, lat] = data.features[0].center;
-  return { lat, lon };
+
+  if (!data.features?.length) throw new Error(`No geocode match for ${address}`);
+
+  // If exactly one match, return immediately
+  if (data.features.length === 1) {
+    const [lon, lat] = data.features[0].center;
+    return { lat, lon };
+  }
+
+  // MULTIPLE MATCHES → show modal selection
+  return await showGeocodeModal(address, data.features);
 }
+
 
 async function routeMeters(from, to) {
   const coords = `${from.lon},${from.lat};${to.lon},${to.lat}`;
@@ -282,5 +298,47 @@ function showBreakdownForDay(dayIndex, allBreakdowns) {
 
   resultsDiv.classList.remove("hidden");
 }
+
+function showGeocodeModal(address, features) {
+  return new Promise((resolve, reject) => {
+    const backdrop = document.getElementById("modalBackdrop");
+    const dialog = document.getElementById("modalDialog");
+    const promptEl = document.getElementById("modalPrompt");
+    const selectEl = document.getElementById("modalSelect");
+    const btnConfirm = document.getElementById("modalConfirm");
+    const btnCancel = document.getElementById("modalCancel");
+
+    // Fill modal
+    promptEl.textContent = `Multiple matches for "${address}". Pick one:`;
+    selectEl.innerHTML = features
+      .map(
+        (f, i) =>
+          `<option value="${i}">${f.place_name.replace(/,/g, " ·")}</option>`
+      )
+      .join("");
+
+    // Show modal
+    backdrop.classList.remove("hidden");
+    dialog.classList.remove("hidden");
+
+    btnCancel.onclick = () => {
+      backdrop.classList.add("hidden");
+      dialog.classList.add("hidden");
+      reject(new Error("User canceled geocode selection."));
+    };
+
+    btnConfirm.onclick = () => {
+      const choice = parseInt(selectEl.value, 10);
+      const feature = features[choice];
+      const [lon, lat] = feature.center;
+
+      backdrop.classList.add("hidden");
+      dialog.classList.add("hidden");
+
+      resolve({ lat, lon });
+    };
+  });
+}
+
 
 
