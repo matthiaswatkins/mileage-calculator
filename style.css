@@ -46,17 +46,13 @@ textarea {
   border-radius: 8px;
   border: 1px solid #ccc;
   resize: vertical;
+  background: #fafafa;
 }
 
 textarea:focus {
   outline: none;
   border-color: #007aff;
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
-}
-
-.options {
-  margin: 0.8rem 0 1rem;
-  font-size: 0.9rem;
 }
 
 button {
@@ -69,55 +65,10 @@ button {
   font-size: 0.98rem;
   font-weight: 600;
   cursor: pointer;
+  margin-top: 1rem;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-button:hover:not(:disabled) {
-  background: #0060c7;
-}
-
-.status {
-  margin-top: 0.8rem;
-  min-height: 1.2rem;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.status.error {
-  color: #b00020;
-}
-
-.results {
-  margin-top: 1.5rem;
-}
-
-.hidden {
-  display: none;
-}
-
-#totalMiles {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 0.5rem;
-}
-
-th,
-td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.9rem;
-}
-
-th {
-  text-align: left;
-  background: #fafafa;
 }
