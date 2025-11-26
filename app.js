@@ -127,7 +127,7 @@ function formatMiles(m) {
 }
 
 // Fallback cache for missing pairs
-const fallbackCache = {}; // "A|B" → miles
+//const fallbackCache = {}; // "A|B" → miles
 
 // ======================================================
 // Fallback API lookup (slow, only you will use this)
