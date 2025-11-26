@@ -25,7 +25,7 @@ const MILEAGE_TABLE = {
 };
 
 // Fallback if missing: geocode + directions API
-const MAPBOX_TOKEN = "YOUR_MAPBOX_ACCESS_TOKEN_HERE";
+const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
 
 // ------------------------------------------------------
 // DOM elements
