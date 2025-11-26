@@ -20,7 +20,7 @@
 
     <label for="locations">Daily Routes (one per line):</label>
     <textarea id="locations" rows="10"
-      placeholder="HOME : LS : JACOBS : HOME&#10;HOME : OFFICE : HOME"></textarea>
+      placeholder="HOME : LS : JACOBS : HOME&#10;HOME : LS : HOME"></textarea>
 
     <button id="calculateBtn">Calculate Mileage</button>
 
@@ -47,6 +47,23 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <!-- MODAL BACKDROP -->
+    <div id="modalBackdrop" class="modal-backdrop hidden"></div>
+    
+    <!-- MODAL DIALOG -->
+    <div id="modalDialog" class="modal hidden">
+      <h3>Select a Location</h3>
+      <p id="modalPrompt"></p>
+    
+      <select id="modalSelect"></select>
+    
+      <div class="modal-buttons">
+        <button id="modalCancel">Cancel</button>
+        <button id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+
 
   </div> <!-- END CONTAINER -->
 
