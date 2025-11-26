@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mileage Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Mileage Calculator</h1>
+    <p class="subtitle">
+      Enter one location per line in the order visited.
+    </p>
+
+    <label for="locations">Locations (one per line):</label>
+    <textarea id="locations" rows="10" placeholder="123 Main St, City
+456 Oak Ave, City
+Client Site, City"></textarea>
+
+    <div class="options">
+      <label>
+        <input type="checkbox" id="roundTrip" />
+        Include return to first location (round trip)
+      </label>
+    </div>
+
+    <button id="calculateBtn">Calculate Miles</button>
+
+    <div id="status" class="status"></div>
+
+    <div id="results" class="results hidden">
+      <h2>Results</h2>
+      <p id="totalMiles"></p>
+
+      <h3>Leg Breakdown</h3>
+      <table id="legsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Miles</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
