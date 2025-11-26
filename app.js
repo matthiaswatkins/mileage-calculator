@@ -238,7 +238,8 @@ calculateBtn.addEventListener("click", async () => {
 
   dailyResultsDiv.innerHTML = html;
 
-  resultsDiv.insertAdjacentElement("afterend", dailyResultsDiv);
+  document.getElementById("dailyResultsContainer").innerHTML = "";
+  document.getElementById("dailyResultsContainer").appendChild(dailyResultsDiv);
 
   // Wire up breakdown buttons
   dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(btn => {
