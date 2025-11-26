@@ -9,8 +9,9 @@
 
 <body>
 
-  <!-- TOP: Input Card -->
   <div class="container">
+
+    <!-- INPUT AREA -->
     <h1>Mileage Calculator</h1>
     <p class="subtitle">
       Paste one workday per line, like:<br>
@@ -24,29 +25,30 @@
     <button id="calculateBtn">Calculate Mileage</button>
 
     <div id="status" class="status"></div>
-  </div>
 
-  <!-- MIDDLE: Daily Results Block (JS will insert its content here) -->
-  <div id="dailyResultsContainer"></div>
+    <!-- DAILY RESULTS BLOCK (JS fills this) -->
+    <div id="dailyResultsContainer"></div>
 
-  <!-- BOTTOM: Route Breakdown -->
-  <div id="results" class="results hidden">
-    <h2>Route Breakdown</h2>
-    <p id="totalMiles"></p>
+    <!-- BREAKDOWN BLOCK -->
+    <div id="results" class="results hidden">
+      <h2>Route Breakdown</h2>
+      <p id="totalMiles"></p>
 
-    <h3>Legs</h3>
-    <table id="legsTable">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>From</th>
-          <th>To</th>
-          <th>Miles</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+      <h3>Legs</h3>
+      <table id="legsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Miles</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div> <!-- END CONTAINER -->
 
   <!-- SCRIPT MUST BE LAST -->
   <script src="app.js"></script>
