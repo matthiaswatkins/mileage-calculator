@@ -6,8 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
+  <!-- TOP: Input Card -->
   <div class="container">
     <h1>Mileage Calculator</h1>
     <p class="subtitle">
@@ -22,10 +24,13 @@
     <button id="calculateBtn">Calculate Mileage</button>
 
     <div id="status" class="status"></div>
+  </div>
 
-    <script src="app.js"></script>
+  <!-- MIDDLE: Daily Results Block (JS will insert its content here) -->
+  <div id="dailyResultsContainer"></div>
 
-    <div id="results" class="results hidden">
+  <!-- BOTTOM: Route Breakdown -->
+  <div id="results" class="results hidden">
     <h2>Route Breakdown</h2>
     <p id="totalMiles"></p>
 
@@ -41,9 +46,10 @@
       </thead>
       <tbody></tbody>
     </table>
-    </div>
-    
   </div>
- 
+
+  <!-- SCRIPT MUST BE LAST -->
+  <script src="app.js"></script>
+
 </body>
 </html>
