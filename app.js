@@ -162,8 +162,10 @@ async function processDailyRow(tokens) {
 calculateBtn.addEventListener("click", async () => {
   setStatus("Working...");
   resultsDiv.classList.add("hidden");
+  legsTableBody.innerHTML = "";
+  totalMilesEl.textContent = "";
 
-  // Clear old daily results
+  // Clear old daily results if any
   if (dailyResultsDiv) dailyResultsDiv.remove();
 
   const rows = inputBox.value
@@ -176,40 +178,108 @@ calculateBtn.addEventListener("click", async () => {
     return;
   }
 
-  // Prepare results box
-  dailyResultsDiv = document.createElement("div");
-  dailyResultsDiv.style.marginTop = "1rem";
-  resultsDiv.insertAdjacentElement("afterend", dailyResultsDiv);
+  // This will carry breakdowns for each day
+  const allBreakdowns = [];
 
   const dailyTotals = [];
 
   for (const row of rows) {
-    const tokens = row.split(":").map(t => t.trim()).filter(t => t.length);
+    const tokens = row
+      .split(":")
+      .map(t => t.trim())
+      .filter(t => t.length);
 
     if (tokens.length < 2) {
       dailyTotals.push("0.00");
+      allBreakdowns.push([]); // empty
       continue;
     }
 
     try {
-      const result = await processDailyRow(tokens);
-      dailyTotals.push(formatMiles(result.total));
+      const { total, legs } = await processDailyRow(tokens);
+      dailyTotals.push(formatMiles(total));
+      allBreakdowns.push(legs);
+
     } catch (err) {
       console.error(err);
       dailyTotals.push("ERROR");
+      allBreakdowns.push([]);
     }
   }
 
-  // Dump output column
-  const column = dailyTotals.join("\n");
+  // Inject daily totals + Show Breakdown links
+  dailyResultsDiv = document.createElement("div");
+  dailyResultsDiv.className = "daily-output";
 
-  dailyResultsDiv.innerHTML = `
+  let html = `
     <h2>Daily Mileage Output</h2>
-    <textarea rows="${dailyTotals.length}" style="width:100%">${column}</textarea>
-    <p style="margin-top: 0.5rem; font-size: 0.9rem;">
-      Copy/paste back into Excel.
+    <textarea rows="${dailyTotals.length}"
+      style="width:100%; margin-bottom:1rem;">${dailyTotals.join("\n")}</textarea>
+    <p style="font-size: 0.9rem; margin-top:0;">
+      Copy/paste into Excel
     </p>
+
+    <h3>Breakdowns</h3>
+    <ul class="day-list">
   `;
+
+  dailyTotals.forEach((miles, idx) => {
+    html += `
+      <li>
+        Day ${idx + 1}: ${miles} miles
+        <button class="showBreakdownBtn" data-index="${idx}">
+          Show Breakdown
+        </button>
+      </li>
+    `;
+  });
+
+  html += `</ul>`;
+
+  dailyResultsDiv.innerHTML = html;
+
+  resultsDiv.insertAdjacentElement("afterend", dailyResultsDiv);
+
+  // Wire up breakdown buttons
+  dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.index);
+      showBreakdownForDay(idx, allBreakdowns);
+    });
+  });
 
   setStatus("Done.");
 });
+
+function showBreakdownForDay(dayIndex, allBreakdowns) {
+  const legs = allBreakdowns[dayIndex];
+
+  if (!legs || !legs.length) {
+    setStatus("No breakdown available for that day.", true);
+    return;
+  }
+
+  // Clear previous breakdown
+  legsTableBody.innerHTML = "";
+  totalMilesEl.textContent = "";
+
+  let total = 0;
+
+  legs.forEach((leg, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${leg.from}</td>
+      <td>${leg.to}</td>
+      <td>${leg.miles.toFixed(2)}</td>
+    `;
+    legsTableBody.appendChild(row);
+    total += leg.miles;
+  });
+
+  totalMilesEl.textContent = `Total: ${total.toFixed(2)} miles`;
+
+  resultsDiv.classList.remove("hidden");
+}
+
+
