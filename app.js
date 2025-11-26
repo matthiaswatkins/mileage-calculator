@@ -25,7 +25,7 @@ const MILEAGE_TABLE = {
 };
 
 // Fallback if missing: geocode + directions API
-const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
+const MAPBOX_TOKEN = "YOUR_MAPBOX_ACCESS_TOKEN_HERE";
 
 // ------------------------------------------------------
 // DOM elements
@@ -113,4 +113,103 @@ async function fallbackLookup(a, b) {
   if (fallbackCache[key] != null) return fallbackCache[key];
 
   // Ask YOU (not her) for addresses if needed
-  let addrA = al
+  let addrA = aliasToAddress(a);
+  let addrB = aliasToAddress(b);
+
+  if (!addrA) addrA = prompt(`Missing address for '${a}'. Enter full address:`).trim();
+  if (!addrB) addrB = prompt(`Missing address for '${b}'. Enter full address:`).trim();
+
+  const ga = await geocode(addrA);
+  const gb = await geocode(addrB);
+  const meters = await routeMeters(ga, gb);
+  const miles = parseFloat(formatMiles(metersToMiles(meters)));
+
+  fallbackCache[key] = miles;
+  fallbackCache[`${b}|${a}`] = miles;
+  return miles;
+}
+
+// ======================================================
+// Main multi-day processing
+// ======================================================
+
+async function processDailyRow(tokens) {
+  let total = 0;
+  let legs = [];
+
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const a = normalize(tokens[i]);
+    const b = normalize(tokens[i + 1]);
+
+    let miles = tableLookup(a, b);
+
+    if (miles == null) {
+      // fallback API (rare)
+      miles = await fallbackLookup(a, b);
+    }
+
+    total += miles;
+    legs.push({ from: a, to: b, miles });
+  }
+
+  return { total, legs };
+}
+
+// ======================================================
+// UI Handler
+// ======================================================
+
+calculateBtn.addEventListener("click", async () => {
+  setStatus("Working...");
+  resultsDiv.classList.add("hidden");
+
+  // Clear old daily results
+  if (dailyResultsDiv) dailyResultsDiv.remove();
+
+  const rows = inputBox.value
+    .split("\n")
+    .map(r => r.trim())
+    .filter(r => r.length > 0);
+
+  if (!rows.length) {
+    setStatus("Paste at least one row.", true);
+    return;
+  }
+
+  // Prepare results box
+  dailyResultsDiv = document.createElement("div");
+  dailyResultsDiv.style.marginTop = "1rem";
+  resultsDiv.insertAdjacentElement("afterend", dailyResultsDiv);
+
+  const dailyTotals = [];
+
+  for (const row of rows) {
+    const tokens = row.split(":").map(t => t.trim()).filter(t => t.length);
+
+    if (tokens.length < 2) {
+      dailyTotals.push("0.00");
+      continue;
+    }
+
+    try {
+      const result = await processDailyRow(tokens);
+      dailyTotals.push(formatMiles(result.total));
+    } catch (err) {
+      console.error(err);
+      dailyTotals.push("ERROR");
+    }
+  }
+
+  // Dump output column
+  const column = dailyTotals.join("\n");
+
+  dailyResultsDiv.innerHTML = `
+    <h2>Daily Mileage Output</h2>
+    <textarea rows="${dailyTotals.length}" style="width:100%">${column}</textarea>
+    <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+      Copy/paste back into Excel.
+    </p>
+  `;
+
+  setStatus("Done.");
+});
