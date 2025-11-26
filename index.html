@@ -8,14 +8,47 @@
 </head>
 <body>
   <div class="container">
+
     <h1>Mileage Calculator</h1>
     <p class="subtitle">
       Paste one workday per line, like:<br>
       <code>HOME : LS : JACOBS : HOME</code>
     </p>
 
+    <!-- INPUT -->
     <label for="locations">Daily Routes (one per line):</label>
     <textarea id="locations" rows="10"
       placeholder="HOME : LS : JACOBS : HOME&#10;HOME : OFFICE : HOME"></textarea>
 
-    <button id="
+    <!-- ACTION -->
+    <button id="calculateBtn">Calculate Mileage</button>
+
+    <!-- STATUS -->
+    <div id="status" class="status"></div>
+
+    <!-- THIS BLOCK IS USED BY THE JS FOR LEG BREAKDOWN (OPTIONAL) -->
+    <div id="results" class="results hidden">
+      <h2>Route Breakdown</h2>
+      <p id="totalMiles"></p>
+
+      <h3>Legs</h3>
+      <table id="legsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Miles</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
+
+</body>
+</html>
