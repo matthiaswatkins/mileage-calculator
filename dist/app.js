@@ -1,0 +1,324 @@
+// ======================================================
+// CONFIG
+// ======================================================
+import { LOCATION_ALIAS } from './locationAlias.js';
+import { MILEAGE_TABLE } from './mileageTable.js';
+
+// Fallback if missing: geocode + directions API
+const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
+
+// ------------------------------------------------------
+// DOM elements
+// ------------------------------------------------------
+
+const inputBox = document.getElementById("locations");
+const calculateBtn = document.getElementById("calculateBtn");
+const statusDiv = document.getElementById("status");
+const resultsDiv = document.getElementById("results");
+const legsTableBody = document.querySelector("#legsTable tbody");
+const totalMilesEl = document.getElementById("totalMiles");
+
+// A new result block for daily totals
+let dailyResultsDiv;
+
+// ------------------------------------------------------
+// Helpers
+// ------------------------------------------------------
+
+function setStatus(msg, isErr = false) {
+  statusDiv.textContent = msg;
+  statusDiv.classList.toggle("error", isErr);
+}
+
+function normalize(token) {
+  return token.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function aliasToAddress(token) {
+  const key = normalize(token);
+  return LOCATION_ALIAS[key] || null;
+}
+
+function tableLookup(a, b) {
+  const key = `${a}|${b}`;
+  const rev = `${b}|${a}`;
+  if (MILEAGE_TABLE[key] != null) return MILEAGE_TABLE[key];
+  if (MILEAGE_TABLE[rev] != null) return MILEAGE_TABLE[rev];
+  return null;
+}
+
+function metersToMiles(m) {
+  return m / 1609.344;
+}
+
+function formatMiles(m) {
+  return m.toFixed(2);
+}
+
+// Fallback cache for missing pairs
+//const fallbackCache = {}; // "A|B" → miles
+
+// ======================================================
+// Fallback API lookup (slow, only you will use this)
+// ======================================================
+
+// Load persistent cache
+let fallbackCache = JSON.parse(localStorage.getItem("fallbackCache") || "{}");
+
+function saveFallbackCache() {
+  localStorage.setItem("fallbackCache", JSON.stringify(fallbackCache));
+}
+
+async function geocode(address) {
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
+    `${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&limit=5`;
+
+  const rsp = await fetch(url);
+  if (!rsp.ok) throw new Error("Geocode failed");
+  const data = await rsp.json();
+
+  if (!data.features?.length) throw new Error(`No geocode match for ${address}`);
+
+  // If exactly one match, return immediately
+  if (data.features.length === 1) {
+    const [lon, lat] = data.features[0].center;
+    return { lat, lon };
+  }
+
+  // MULTIPLE MATCHES → show modal selection
+  return await showGeocodeModal(address, data.features);
+}
+
+
+async function routeMeters(from, to) {
+  const coords = `${from.lon},${from.lat};${to.lon},${to.lat}`;
+  const url =
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}` +
+    `?access_token=${MAPBOX_TOKEN}&overview=false`;
+
+  const rsp = await fetch(url);
+  if (!rsp.ok) throw new Error("Directions failed");
+  const data = await rsp.json();
+  if (!data.routes?.length) throw new Error("No route returned");
+  return data.routes[0].distance; // meters
+}
+
+async function fallbackLookup(a, b) {
+  const key = `${a}|${b}`;
+  if (fallbackCache[key] != null) return fallbackCache[key];
+
+  // Ask YOU (not her) for addresses if needed
+  let addrA = aliasToAddress(a);
+  let addrB = aliasToAddress(b);
+
+  if (!addrA) addrA = prompt(`Missing address for '${a}'. Enter full address:`).trim();
+  if (!addrB) addrB = prompt(`Missing address for '${b}'. Enter full address:`).trim();
+
+  const ga = await geocode(addrA);
+  const gb = await geocode(addrB);
+  const meters = await routeMeters(ga, gb);
+  const miles = parseFloat(formatMiles(metersToMiles(meters)));
+
+  fallbackCache[key] = miles;
+  fallbackCache[`${b}|${a}`] = miles;
+  return miles;
+}
+
+// ======================================================
+// Main multi-day processing
+// ======================================================
+
+async function processDailyRow(tokens) {
+  let total = 0;
+  let legs = [];
+
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const a = normalize(tokens[i]);
+    const b = normalize(tokens[i + 1]);
+
+    let miles = tableLookup(a, b);
+
+    if (miles == null) {
+      // fallback API (rare)
+      miles = await fallbackLookup(a, b);
+    }
+
+    total += miles;
+    legs.push({ from: a, to: b, miles });
+  }
+
+  return { total, legs };
+}
+
+// ======================================================
+// UI Handler
+// ======================================================
+
+calculateBtn.addEventListener("click", async () => {
+  setStatus("Working...");
+  resultsDiv.classList.add("hidden");
+  legsTableBody.innerHTML = "";
+  totalMilesEl.textContent = "";
+
+  // Clear old daily results if any
+  if (dailyResultsDiv) dailyResultsDiv.remove();
+
+  const rows = inputBox.value
+    .split("\n")
+    .map(r => r.trim())
+    .filter(r => r.length > 0);
+
+  if (!rows.length) {
+    setStatus("Paste at least one row.", true);
+    return;
+  }
+
+  // This will carry breakdowns for each day
+  const allBreakdowns = [];
+
+  const dailyTotals = [];
+
+  for (const row of rows) {
+    const tokens = row
+      .split(":")
+      .map(t => t.trim())
+      .filter(t => t.length);
+
+    if (tokens.length < 2) {
+      dailyTotals.push("0.00");
+      allBreakdowns.push([]); // empty
+      continue;
+    }
+
+    try {
+      const { total, legs } = await processDailyRow(tokens);
+      dailyTotals.push(formatMiles(total));
+      allBreakdowns.push(legs);
+
+    } catch (err) {
+      console.error(err);
+      dailyTotals.push("ERROR");
+      allBreakdowns.push([]);
+    }
+  }
+
+  // Inject daily totals + Show Breakdown links
+  dailyResultsDiv = document.createElement("div");
+  dailyResultsDiv.className = "daily-output";
+
+  let html = `
+    <h2>Daily Mileage Output</h2>
+    <textarea rows="${dailyTotals.length}"
+      style="width:100%; margin-bottom:1rem;">${dailyTotals.join("\n")}</textarea>
+    <p style="font-size: 0.9rem; margin-top:0;">
+      Copy/paste into Excel
+    </p>
+
+    <h3>Breakdowns</h3>
+    <ul class="day-list">
+  `;
+
+  dailyTotals.forEach((miles, idx) => {
+    html += `
+      <li>
+        Day ${idx + 1}: ${miles} miles
+        <button class="showBreakdownBtn" data-index="${idx}">
+          Show Breakdown
+        </button>
+      </li>
+    `;
+  });
+
+  html += `</ul>`;
+
+  dailyResultsDiv.innerHTML = html;
+
+  document.getElementById("dailyResultsContainer").innerHTML = "";
+  document.getElementById("dailyResultsContainer").appendChild(dailyResultsDiv);
+
+  // Wire up breakdown buttons
+  dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.index);
+      showBreakdownForDay(idx, allBreakdowns);
+    });
+  });
+
+  setStatus("Done.");
+});
+
+function showBreakdownForDay(dayIndex, allBreakdowns) {
+  const legs = allBreakdowns[dayIndex];
+
+  if (!legs || !legs.length) {
+    setStatus("No breakdown available for that day.", true);
+    return;
+  }
+
+  // Clear previous breakdown
+  legsTableBody.innerHTML = "";
+  totalMilesEl.textContent = "";
+
+  let total = 0;
+
+  legs.forEach((leg, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${leg.from}</td>
+      <td>${leg.to}</td>
+      <td>${leg.miles.toFixed(2)}</td>
+    `;
+    legsTableBody.appendChild(row);
+    total += leg.miles;
+  });
+
+  totalMilesEl.textContent = `Total: ${total.toFixed(2)} miles`;
+
+  resultsDiv.classList.remove("hidden");
+}
+
+function showGeocodeModal(address, features) {
+  return new Promise((resolve, reject) => {
+    const backdrop = document.getElementById("modalBackdrop");
+    const dialog = document.getElementById("modalDialog");
+    const promptEl = document.getElementById("modalPrompt");
+    const selectEl = document.getElementById("modalSelect");
+    const btnConfirm = document.getElementById("modalConfirm");
+    const btnCancel = document.getElementById("modalCancel");
+
+    // Fill modal
+    promptEl.textContent = `Multiple matches for "${address}". Pick one:`;
+    selectEl.innerHTML = features
+      .map(
+        (f, i) =>
+          `<option value="${i}">${f.place_name.replace(/,/g, " ·")}</option>`
+      )
+      .join("");
+
+    // Show modal
+    backdrop.classList.remove("hidden");
+    dialog.classList.remove("hidden");
+
+    btnCancel.onclick = () => {
+      backdrop.classList.add("hidden");
+      dialog.classList.add("hidden");
+      reject(new Error("User canceled geocode selection."));
+    };
+
+    btnConfirm.onclick = () => {
+      const choice = parseInt(selectEl.value, 10);
+      const feature = features[choice];
+      const [lon, lat] = feature.center;
+
+      backdrop.classList.add("hidden");
+      dialog.classList.add("hidden");
+
+      resolve({ lat, lon });
+    };
+  });
+}
+
+
+
