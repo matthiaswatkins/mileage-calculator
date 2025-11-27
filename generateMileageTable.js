@@ -1,18 +1,9 @@
 //------------------------------------------------------------
 // CONFIG
 //------------------------------------------------------------
+import { LOCATION_ALIAS } from './locationAlias.js';
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || "YOUR_MAPBOX_TOKEN_HERE";
-
-// IMPORTANT: Your short-code → address mapping
-// You can hide HOME using environment variables if desired
-// Example: HOME: process.env.HOME_ADDR
-const LOCATION_ALIAS = {
-  HOME: process.env.HOME_ADDR || "123 Fake St, Springfield IL",
-  LS: "200 Lakeshore Rd, Springfield IL",
-  JACOBS: "14 Jacobs Ct, Springfield IL",
-  OFFICE: "500 Corporate Dr, Springfield IL"
-};
 
 // Output file
 const OUTPUT_JS_FILE = "mileageTable.js";
