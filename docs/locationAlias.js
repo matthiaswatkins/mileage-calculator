@@ -5,5 +5,7 @@ export const LOCATION_ALIAS = {
   HILLCREST: "200 W Arbor Dr, San Diego, CA 92103",
   SDMC: "9461 Clairemont Mesa Blvd, San Diego, CA 92123",
   ZION: "4647 Zion Ave, San Diego, CA 92120",
-  PVH: "2400 E 4th St, National City, CA 91950"
+  PVH: "2400 E 4th St, National City, CA 91950",
+  KPNNO: "8010 Parkway Dr, La Mesa, CA 91942",
+  HOME: "4635 Texas St, San Diego, CA 92116"
 };
