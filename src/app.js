@@ -3,6 +3,8 @@
 // ======================================================
 import { LOCATION_ALIAS } from './locationAlias.js';
 import { MILEAGE_TABLE } from './mileageTable.js';
+import { APP_VERSION, BUILD_DATE } from './version.js';
+
 
 // Fallback if missing: geocode + directions API
 const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
@@ -17,6 +19,9 @@ const statusDiv = document.getElementById("status");
 const resultsDiv = document.getElementById("results");
 const legsTableBody = document.querySelector("#legsTable tbody");
 const totalMilesEl = document.getElementById("totalMiles");
+const versionEl = document.getElementById("versionInfo");
+versionEl.textContent = `Version ${APP_VERSION} • ${BUILD_DATE}`;
+
 
 // A new result block for daily totals
 let dailyResultsDiv;

@@ -136,4 +136,11 @@ button:disabled {
   display: none !important;
 }
 
+.version-info {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #777;
+  text-align: right;
+}
+
 
