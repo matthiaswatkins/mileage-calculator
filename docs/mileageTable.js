@@ -1,6 +1,6 @@
 // Auto-generated mileage table
 
-const MILEAGE_TABLE = {
+export const MILEAGE_TABLE = {
   "LS|JACOBS": 11.15,
   "JACOBS|LS": 11.15,
   "LS|EAST": 8.18,
@@ -75,4 +75,4 @@ const MILEAGE_TABLE = {
   "HOME|KPNNO": 8.15
 };
 
-export default MILEAGE_TABLE;
+// Generated on 2025-12-27T14:50:33.688Z
