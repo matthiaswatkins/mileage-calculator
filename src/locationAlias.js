@@ -7,5 +7,5 @@ export const LOCATION_ALIAS = {
   ZION: "4647 Zion Ave, San Diego, CA 92120",
   PVH: "2400 E 4th St, National City, CA 91950",
   KPNNO: "8010 Parkway Dr, La Mesa, CA 91942",
-  HOME: "4635 Texas St, San Diego, CA 92116"
+  HOME: "2626 Greyling Dr., San Diego, CA 92123"
 };
