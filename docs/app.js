@@ -34,14 +34,38 @@ let calculatedDailyTotals = [];
 // ------------------------------------------------------
 // Initialize Alias Chips
 // ------------------------------------------------------
+// Load custom aliases saved in localStorage, and merge with hardcoded ones
+let customAliases = JSON.parse(localStorage.getItem("customAliases") || "{}");
+
+function getAllAliases() {
+  return { ...LOCATION_ALIAS, ...customAliases };
+}
+
+function saveCustomAliases() {
+  localStorage.setItem("customAliases", JSON.stringify(customAliases));
+}
+
+// Update aliasToAddress to check the merged set:
+function aliasToAddress(token) {
+  const key = normalize(token);
+  const all = getAllAliases();
+  return all[key] || null;
+}
+
+// Update renderAliasChips to render both default and custom chips:
 function renderAliasChips() {
   aliasChipsDiv.innerHTML = "";
-  Object.keys(LOCATION_ALIAS).forEach(alias => {
+  const all = getAllAliases();
+  Object.keys(all).forEach(alias => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
+    // Mark custom chips with a distinct styling class if desired
+    if (customAliases[alias]) {
+      chip.classList.add("custom-chip");
+    }
     chip.textContent = alias;
-    chip.title = LOCATION_ALIAS[alias];
+    chip.title = all[alias];
     chip.addEventListener("click", () => insertAlias(alias));
     aliasChipsDiv.appendChild(chip);
   });
@@ -66,6 +90,50 @@ function insertAlias(alias) {
 renderAliasChips();
 
 // ------------------------------------------------------
+// Add Location Modal Handlers
+// ------------------------------------------------------
+const openAddLocationBtn = document.getElementById("openAddLocationBtn");
+const addLocationModal = document.getElementById("addLocationModal");
+const cancelAddLocationBtn = document.getElementById("cancelAddLocationBtn");
+const saveLocationBtn = document.getElementById("saveLocationBtn");
+const newAliasInput = document.getElementById("newAliasInput");
+const newAddressInput = document.getElementById("newAddressInput");
+const backdrop = document.getElementById("modalBackdrop");
+
+openAddLocationBtn.addEventListener("click", () => {
+  newAliasInput.value = "";
+  newAddressInput.value = "";
+  backdrop.classList.remove("hidden");
+  addLocationModal.classList.remove("hidden");
+  newAliasInput.focus();
+});
+
+cancelAddLocationBtn.addEventListener("click", () => {
+  backdrop.classList.add("hidden");
+  addLocationModal.classList.add("hidden");
+});
+
+saveLocationBtn.addEventListener("click", () => {
+  const rawAlias = newAliasInput.value.trim();
+  const address = newAddressInput.value.trim();
+
+  if (!rawAlias || !address) {
+    alert("Please provide both an alias and a full address.");
+    return;
+  }
+
+  const aliasKey = normalize(rawAlias);
+
+  customAliases[aliasKey] = address;
+  saveCustomAliases();
+  renderAliasChips();
+
+  backdrop.classList.add("hidden");
+  addLocationModal.classList.add("hidden");
+  setStatus(`Added "${aliasKey}"! It's ready to use.`);
+});
+
+// ------------------------------------------------------
 // Helpers
 // ------------------------------------------------------
 function setStatus(msg, isErr = false) {
@@ -75,11 +143,6 @@ function setStatus(msg, isErr = false) {
 
 function normalize(token) {
   return token.trim().toUpperCase().replace(/\s+/g, "");
-}
-
-function aliasToAddress(token) {
-  const key = normalize(token);
-  return LOCATION_ALIAS[key] || null;
 }
 
 function tableLookup(a, b) {

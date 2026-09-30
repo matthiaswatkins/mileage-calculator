@@ -59,6 +59,44 @@ label {
   margin-bottom: 1.25rem;
 }
 
+.chips-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+.chips-header label {
+  margin-bottom: 0;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #0071e3;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-text:hover {
+  background: none;
+  color: #0056b3;
+}
+
+/* Optional: Slight color distinction for user-created locations */
+.chip.custom-chip {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.chip.custom-chip:hover {
+  background: #dcfce7;
+}
+
 .chip {
   padding: 0.3rem 0.65rem;
   background: #edf2f7;
