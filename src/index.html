@@ -21,7 +21,7 @@
     <!-- QUICK ALIAS CHIP BAR -->
     <div class="chips-header">
       <label>Quick Insert Locations:</label>
-      <button id="openAddLocationBtn" type="button" class="btn-text">+ Add Location</button>
+      <button id="openManageLocationsBtn" type="button" class="btn-text">⚙ Manage Locations</button>
     </div>
     <div id="aliasChips" class="alias-chips"></div>
 
@@ -81,7 +81,7 @@
     <!-- MODAL BACKDROP -->
     <div id="modalBackdrop" class="modal-backdrop hidden"></div>
     
-    <!-- MODAL DIALOG -->
+    <!-- GEOCODE MODAL -->
     <div id="modalDialog" class="modal hidden">
       <h3>Select a Location</h3>
       <p id="modalPrompt"></p>
@@ -94,21 +94,30 @@
       </div>
     </div>
 
-    <!-- ADD LOCATION MODAL -->
-    <div id="addLocationModal" class="modal hidden">
-      <h3>Add New Location</h3>
-      <p style="font-size: 0.85rem; color: #666; margin-top: 0;">
-        Add a shorthand name and address. Distances will be calculated automatically on first use.
+    <!-- MANAGE LOCATIONS MODAL -->
+    <div id="manageLocationsModal" class="modal modal-wide hidden">
+      <h3>Manage Locations</h3>
+      
+      <!-- Existing Custom Locations List -->
+      <div id="customLocationsList" class="custom-locations-container"></div>
+
+      <hr class="modal-divider" />
+
+      <h4 id="formHeader" style="margin: 0.5rem 0 0.2rem 0; font-size: 0.95rem;">Add New Location</h4>
+      <p style="font-size: 0.8rem; color: #666; margin-top: 0; margin-bottom: 0.75rem;">
+        Distances are resolved automatically on first trip calculation.
       </p>
 
-      <label for="newAliasInput">Alias / Code (e.g. RADY):</label>
-      <input type="text" id="newAliasInput" placeholder="RADY" style="width: 100%; margin-bottom: 0.8rem; text-transform: uppercase;" />
+      <input type="hidden" id="editingAliasKey" value="" />
 
-      <label for="newAddressInput">Full Street Address:</label>
-      <input type="text" id="newAddressInput" placeholder="3020 Children's Way, San Diego, CA 92123" style="width: 100%;" />
+      <label for="newAliasInput" style="font-size: 0.8rem;">Alias / Code (e.g. RADY):</label>
+      <input type="text" id="newAliasInput" placeholder="RADY" style="width: 100%; margin-bottom: 0.75rem; text-transform: uppercase;" />
+
+      <label for="newAddressInput" style="font-size: 0.8rem;">Full Street Address:</label>
+      <input type="text" id="newAddressInput" placeholder="3020 Children's Way, San Diego, CA 92123" style="width: 100%; margin-bottom: 1rem;" />
 
       <div class="modal-buttons">
-        <button id="cancelAddLocationBtn" type="button" class="btn-secondary">Cancel</button>
+        <button id="cancelManageLocationsBtn" type="button" class="btn-secondary">Close</button>
         <button id="saveLocationBtn" type="button">Save Location</button>
       </div>
     </div>

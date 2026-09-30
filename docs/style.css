@@ -52,13 +52,6 @@ label {
 }
 
 /* Chips Toolbar */
-.alias-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 1.25rem;
-}
-
 .chips-header {
   display: flex;
   justify-content: space-between;
@@ -87,14 +80,11 @@ label {
   color: #0056b3;
 }
 
-/* Optional: Slight color distinction for user-created locations */
-.chip.custom-chip {
-  background: #f0fdf4;
-  color: #166534;
-  border-color: #bbf7d0;
-}
-.chip.custom-chip:hover {
-  background: #dcfce7;
+.alias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
 }
 
 .chip {
@@ -117,6 +107,16 @@ label {
 
 .chip:active {
   transform: scale(0.95);
+}
+
+.chip.custom-chip {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.chip.custom-chip:hover {
+  background: #dcfce7;
 }
 
 /* Textarea & Inputs */
@@ -363,7 +363,7 @@ button:active {
   text-transform: uppercase;
 }
 
-/* Modal */
+/* Modals */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -383,6 +383,96 @@ button:active {
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   z-index: 1001;
+}
+
+.modal.modal-wide {
+  width: 420px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-divider {
+  border: 0;
+  border-top: 1px solid #e5e5ea;
+  margin: 1rem 0 0.75rem 0;
+}
+
+.custom-locations-container {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e5e5ea;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 0.5rem;
+}
+
+.empty-note {
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+}
+
+.custom-loc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.custom-loc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #eee;
+  gap: 0.5rem;
+}
+
+.custom-loc-item:last-child {
+  border-bottom: none;
+}
+
+.custom-loc-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.custom-loc-info strong {
+  font-size: 0.85rem;
+  color: #111;
+}
+
+.custom-loc-addr {
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-loc-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  margin: 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.btn-icon:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  background: none;
 }
 
 .modal select {

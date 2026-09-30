@@ -5,6 +5,7 @@ import { LOCATION_ALIAS } from './locationAlias.js';
 import { MILEAGE_TABLE } from './mileageTable.js';
 import { APP_VERSION, BUILD_DATE } from './version.js';
 
+// Fallback if missing: geocode + directions API
 const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
 
 // ------------------------------------------------------
@@ -26,33 +27,39 @@ const metricDays = document.getElementById("metricDays");
 const metricMiles = document.getElementById("metricMiles");
 const metricPayout = document.getElementById("metricPayout");
 
+const openManageLocationsBtn = document.getElementById("openManageLocationsBtn");
+const manageLocationsModal = document.getElementById("manageLocationsModal");
+const cancelManageLocationsBtn = document.getElementById("cancelManageLocationsBtn");
+const saveLocationBtn = document.getElementById("saveLocationBtn");
+const customLocationsList = document.getElementById("customLocationsList");
+const backdrop = document.getElementById("modalBackdrop");
+
 versionEl.textContent = `Version ${APP_VERSION} • ${BUILD_DATE}`;
 
 let dailyResultsDiv;
 let calculatedDailyTotals = [];
 
 // ------------------------------------------------------
-// Initialize Alias Chips
+// Custom Aliases & Persistent Cache
 // ------------------------------------------------------
-// Load custom aliases saved in localStorage, and merge with hardcoded ones
 let customAliases = JSON.parse(localStorage.getItem("customAliases") || "{}");
-
-function getAllAliases() {
-  return { ...LOCATION_ALIAS, ...customAliases };
-}
+let fallbackCache = JSON.parse(localStorage.getItem("fallbackCache") || "{}");
 
 function saveCustomAliases() {
   localStorage.setItem("customAliases", JSON.stringify(customAliases));
 }
 
-// Update aliasToAddress to check the merged set:
-function aliasToAddress(token) {
-  const key = normalize(token);
-  const all = getAllAliases();
-  return all[key] || null;
+function saveFallbackCache() {
+  localStorage.setItem("fallbackCache", JSON.stringify(fallbackCache));
 }
 
-// Update renderAliasChips to render both default and custom chips:
+function getAllAliases() {
+  return { ...LOCATION_ALIAS, ...customAliases };
+}
+
+// ------------------------------------------------------
+// Alias Chips & Insertion
+// ------------------------------------------------------
 function renderAliasChips() {
   aliasChipsDiv.innerHTML = "";
   const all = getAllAliases();
@@ -60,7 +67,6 @@ function renderAliasChips() {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
-    // Mark custom chips with a distinct styling class if desired
     if (customAliases[alias]) {
       chip.classList.add("custom-chip");
     }
@@ -76,7 +82,6 @@ function insertAlias(alias) {
   const end = inputBox.selectionEnd;
   const text = inputBox.value;
 
-  // Determine prefix: if cursor is not at start of line/after newline, add separator
   const before = text.substring(0, start);
   const after = text.substring(end);
   const needsSeparator = before.length > 0 && !before.endsWith("\n") && !before.endsWith(" ") && !before.endsWith(":");
@@ -90,50 +95,6 @@ function insertAlias(alias) {
 renderAliasChips();
 
 // ------------------------------------------------------
-// Add Location Modal Handlers
-// ------------------------------------------------------
-const openAddLocationBtn = document.getElementById("openAddLocationBtn");
-const addLocationModal = document.getElementById("addLocationModal");
-const cancelAddLocationBtn = document.getElementById("cancelAddLocationBtn");
-const saveLocationBtn = document.getElementById("saveLocationBtn");
-const newAliasInput = document.getElementById("newAliasInput");
-const newAddressInput = document.getElementById("newAddressInput");
-const backdrop = document.getElementById("modalBackdrop");
-
-openAddLocationBtn.addEventListener("click", () => {
-  newAliasInput.value = "";
-  newAddressInput.value = "";
-  backdrop.classList.remove("hidden");
-  addLocationModal.classList.remove("hidden");
-  newAliasInput.focus();
-});
-
-cancelAddLocationBtn.addEventListener("click", () => {
-  backdrop.classList.add("hidden");
-  addLocationModal.classList.add("hidden");
-});
-
-saveLocationBtn.addEventListener("click", () => {
-  const rawAlias = newAliasInput.value.trim();
-  const address = newAddressInput.value.trim();
-
-  if (!rawAlias || !address) {
-    alert("Please provide both an alias and a full address.");
-    return;
-  }
-
-  const aliasKey = normalize(rawAlias);
-
-  customAliases[aliasKey] = address;
-  saveCustomAliases();
-  renderAliasChips();
-
-  backdrop.classList.add("hidden");
-  addLocationModal.classList.add("hidden");
-  setStatus(`Added "${aliasKey}"! It's ready to use.`);
-});
-
-// ------------------------------------------------------
 // Helpers
 // ------------------------------------------------------
 function setStatus(msg, isErr = false) {
@@ -143,6 +104,12 @@ function setStatus(msg, isErr = false) {
 
 function normalize(token) {
   return token.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function aliasToAddress(token) {
+  const key = normalize(token);
+  const all = getAllAliases();
+  return all[key] || null;
 }
 
 function tableLookup(a, b) {
@@ -162,14 +129,8 @@ function formatMiles(m) {
 }
 
 // ------------------------------------------------------
-// Fallback Persistent API Lookup
+// Mapbox API Fallbacks
 // ------------------------------------------------------
-let fallbackCache = JSON.parse(localStorage.getItem("fallbackCache") || "{}");
-
-function saveFallbackCache() {
-  localStorage.setItem("fallbackCache", JSON.stringify(fallbackCache));
-}
-
 async function geocode(address) {
   const url =
     `https://api.mapbox.com/geocoding/v5/mapbox.places/` +
@@ -224,7 +185,7 @@ async function fallbackLookup(a, b) {
 }
 
 // ------------------------------------------------------
-// Processing Routes
+// Routing & Calculation
 // ------------------------------------------------------
 async function processDailyRow(tokens) {
   let total = 0;
@@ -267,9 +228,6 @@ rateInput.addEventListener("input", () => {
   }
 });
 
-// ------------------------------------------------------
-// UI Event Handlers
-// ------------------------------------------------------
 calculateBtn.addEventListener("click", async () => {
   setStatus("Working...");
   resultsDiv.classList.add("hidden");
@@ -293,7 +251,6 @@ calculateBtn.addEventListener("click", async () => {
   calculatedDailyTotals = [];
 
   for (const row of rows) {
-    // Flexible parsing: colons (:), arrows (->), dashes (-), commas (,), or brackets (>)
     const tokens = row
       .split(/[:\->,]+/)
       .map(t => t.trim())
@@ -352,7 +309,6 @@ calculateBtn.addEventListener("click", async () => {
   container.innerHTML = "";
   container.appendChild(dailyResultsDiv);
 
-  // Wire up Copy Button
   const copyBtn = document.getElementById("copyExcelBtn");
   copyBtn.addEventListener("click", async () => {
     await navigator.clipboard.writeText(calculatedDailyTotals.join("\n"));
@@ -364,7 +320,6 @@ calculateBtn.addEventListener("click", async () => {
     }, 2000);
   });
 
-  // Wire up breakdown buttons
   dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(btn => {
     btn.addEventListener("click", () => {
       dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(b => b.classList.remove("active"));
@@ -406,9 +361,11 @@ function showBreakdownForDay(dayIndex, allBreakdowns) {
   resultsDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+// ------------------------------------------------------
+// Geocode Modal Handler
+// ------------------------------------------------------
 function showGeocodeModal(address, features) {
   return new Promise((resolve, reject) => {
-    const backdrop = document.getElementById("modalBackdrop");
     const dialog = document.getElementById("modalDialog");
     const promptEl = document.getElementById("modalPrompt");
     const selectEl = document.getElementById("modalSelect");
@@ -441,3 +398,122 @@ function showGeocodeModal(address, features) {
     };
   });
 }
+
+// ------------------------------------------------------
+// Manage Locations Modal Handlers
+// ------------------------------------------------------
+function deleteCustomLocation(alias) {
+  if (!confirm(`Are you sure you want to delete "${alias}"?`)) return;
+
+  delete customAliases[alias];
+  saveCustomAliases();
+
+  const keys = Object.keys(fallbackCache);
+  keys.forEach(pairKey => {
+    const [from, to] = pairKey.split("|");
+    if (from === alias || to === alias) {
+      delete fallbackCache[pairKey];
+    }
+  });
+  saveFallbackCache();
+
+  renderAliasChips();
+  renderCustomLocationsList();
+  setStatus(`Removed "${alias}".`);
+}
+
+function editCustomLocation(alias) {
+  document.getElementById("editingAliasKey").value = alias;
+  document.getElementById("newAliasInput").value = alias;
+  document.getElementById("newAliasInput").disabled = true;
+  document.getElementById("newAddressInput").value = customAliases[alias];
+  document.getElementById("formHeader").textContent = `Edit Address for "${alias}"`;
+  document.getElementById("saveLocationBtn").textContent = "Update Address";
+  document.getElementById("newAddressInput").focus();
+}
+
+function resetLocationForm() {
+  document.getElementById("editingAliasKey").value = "";
+  document.getElementById("newAliasInput").value = "";
+  document.getElementById("newAliasInput").disabled = false;
+  document.getElementById("newAddressInput").value = "";
+  document.getElementById("formHeader").textContent = "Add New Location";
+  document.getElementById("saveLocationBtn").textContent = "Save Location";
+}
+
+function renderCustomLocationsList() {
+  const keys = Object.keys(customAliases);
+  if (keys.length === 0) {
+    customLocationsList.innerHTML = `<p class="empty-note">No custom locations added yet.</p>`;
+    return;
+  }
+
+  let html = `<ul class="custom-loc-list">`;
+  keys.forEach(alias => {
+    html += `
+      <li class="custom-loc-item">
+        <div class="custom-loc-info">
+          <strong>${alias}</strong>
+          <span class="custom-loc-addr">${customAliases[alias]}</span>
+        </div>
+        <div class="custom-loc-actions">
+          <button type="button" class="btn-icon edit-btn" data-alias="${alias}" title="Edit Address">✏️</button>
+          <button type="button" class="btn-icon delete-btn" data-alias="${alias}" title="Delete Location">🗑️</button>
+        </div>
+      </li>
+    `;
+  });
+  html += `</ul>`;
+  customLocationsList.innerHTML = html;
+
+  customLocationsList.querySelectorAll(".edit-btn").forEach(btn => {
+    btn.onclick = () => editCustomLocation(btn.dataset.alias);
+  });
+  customLocationsList.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = () => deleteCustomLocation(btn.dataset.alias);
+  });
+}
+
+openManageLocationsBtn.addEventListener("click", () => {
+  resetLocationForm();
+  renderCustomLocationsList();
+  backdrop.classList.remove("hidden");
+  manageLocationsModal.classList.remove("hidden");
+});
+
+cancelManageLocationsBtn.addEventListener("click", () => {
+  backdrop.classList.add("hidden");
+  manageLocationsModal.classList.add("hidden");
+});
+
+saveLocationBtn.addEventListener("click", () => {
+  const editingKey = document.getElementById("editingAliasKey").value;
+  const rawAlias = document.getElementById("newAliasInput").value.trim();
+  const address = document.getElementById("newAddressInput").value.trim();
+
+  if (!address || (!editingKey && !rawAlias)) {
+    alert("Please provide both an alias and a full street address.");
+    return;
+  }
+
+  const aliasKey = editingKey || normalize(rawAlias);
+
+  if (editingKey && customAliases[editingKey] !== address) {
+    Object.keys(fallbackCache).forEach(pairKey => {
+      const [from, to] = pairKey.split("|");
+      if (from === aliasKey || to === aliasKey) {
+        delete fallbackCache[pairKey];
+      }
+    });
+    saveFallbackCache();
+  }
+
+  customAliases[aliasKey] = address;
+  saveCustomAliases();
+
+  renderAliasChips();
+  renderCustomLocationsList();
+  resetLocationForm();
+
+  setStatus(`Saved location "${aliasKey}".`);
+});
