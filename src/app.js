@@ -1,35 +1,73 @@
 // ======================================================
-// CONFIG
+// CONFIG & IMPORTS
 // ======================================================
 import { LOCATION_ALIAS } from './locationAlias.js';
 import { MILEAGE_TABLE } from './mileageTable.js';
 import { APP_VERSION, BUILD_DATE } from './version.js';
 
-
-// Fallback if missing: geocode + directions API
 const MAPBOX_TOKEN = "pk.eyJ1IjoibWF0dGhpYXN3IiwiYSI6ImNtaWc2anViaDAwZDkzY3ExZ20waml0ZnQifQ.ncDM-q4piCtrnbVIw4uexw";
 
 // ------------------------------------------------------
-// DOM elements
+// DOM Elements
 // ------------------------------------------------------
-
 const inputBox = document.getElementById("locations");
 const calculateBtn = document.getElementById("calculateBtn");
+const rateInput = document.getElementById("rateInput");
 const statusDiv = document.getElementById("status");
 const resultsDiv = document.getElementById("results");
+const breakdownTitle = document.getElementById("breakdownTitle");
 const legsTableBody = document.querySelector("#legsTable tbody");
 const totalMilesEl = document.getElementById("totalMiles");
 const versionEl = document.getElementById("versionInfo");
+const aliasChipsDiv = document.getElementById("aliasChips");
+
+const summaryCard = document.getElementById("summaryCard");
+const metricDays = document.getElementById("metricDays");
+const metricMiles = document.getElementById("metricMiles");
+const metricPayout = document.getElementById("metricPayout");
+
 versionEl.textContent = `Version ${APP_VERSION} • ${BUILD_DATE}`;
 
-
-// A new result block for daily totals
 let dailyResultsDiv;
+let calculatedDailyTotals = [];
+
+// ------------------------------------------------------
+// Initialize Alias Chips
+// ------------------------------------------------------
+function renderAliasChips() {
+  aliasChipsDiv.innerHTML = "";
+  Object.keys(LOCATION_ALIAS).forEach(alias => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = alias;
+    chip.title = LOCATION_ALIAS[alias];
+    chip.addEventListener("click", () => insertAlias(alias));
+    aliasChipsDiv.appendChild(chip);
+  });
+}
+
+function insertAlias(alias) {
+  const start = inputBox.selectionStart;
+  const end = inputBox.selectionEnd;
+  const text = inputBox.value;
+
+  // Determine prefix: if cursor is not at start of line/after newline, add separator
+  const before = text.substring(0, start);
+  const after = text.substring(end);
+  const needsSeparator = before.length > 0 && !before.endsWith("\n") && !before.endsWith(" ") && !before.endsWith(":");
+  const insertion = (needsSeparator ? " : " : "") + alias;
+
+  inputBox.value = before + insertion + after;
+  inputBox.selectionStart = inputBox.selectionEnd = start + insertion.length;
+  inputBox.focus();
+}
+
+renderAliasChips();
 
 // ------------------------------------------------------
 // Helpers
 // ------------------------------------------------------
-
 function setStatus(msg, isErr = false) {
   statusDiv.textContent = msg;
   statusDiv.classList.toggle("error", isErr);
@@ -60,14 +98,9 @@ function formatMiles(m) {
   return m.toFixed(2);
 }
 
-// Fallback cache for missing pairs
-//const fallbackCache = {}; // "A|B" → miles
-
-// ======================================================
-// Fallback API lookup (slow, only you will use this)
-// ======================================================
-
-// Load persistent cache
+// ------------------------------------------------------
+// Fallback Persistent API Lookup
+// ------------------------------------------------------
 let fallbackCache = JSON.parse(localStorage.getItem("fallbackCache") || "{}");
 
 function saveFallbackCache() {
@@ -85,16 +118,13 @@ async function geocode(address) {
 
   if (!data.features?.length) throw new Error(`No geocode match for ${address}`);
 
-  // If exactly one match, return immediately
   if (data.features.length === 1) {
     const [lon, lat] = data.features[0].center;
     return { lat, lon };
   }
 
-  // MULTIPLE MATCHES → show modal selection
   return await showGeocodeModal(address, data.features);
 }
-
 
 async function routeMeters(from, to) {
   const coords = `${from.lon},${from.lat};${to.lon},${to.lat}`;
@@ -106,14 +136,13 @@ async function routeMeters(from, to) {
   if (!rsp.ok) throw new Error("Directions failed");
   const data = await rsp.json();
   if (!data.routes?.length) throw new Error("No route returned");
-  return data.routes[0].distance; // meters
+  return data.routes[0].distance;
 }
 
 async function fallbackLookup(a, b) {
   const key = `${a}|${b}`;
   if (fallbackCache[key] != null) return fallbackCache[key];
 
-  // Ask YOU (not her) for addresses if needed
   let addrA = aliasToAddress(a);
   let addrB = aliasToAddress(b);
 
@@ -127,13 +156,13 @@ async function fallbackLookup(a, b) {
 
   fallbackCache[key] = miles;
   fallbackCache[`${b}|${a}`] = miles;
+  saveFallbackCache();
   return miles;
 }
 
-// ======================================================
-// Main multi-day processing
-// ======================================================
-
+// ------------------------------------------------------
+// Processing Routes
+// ------------------------------------------------------
 async function processDailyRow(tokens) {
   let total = 0;
   let legs = [];
@@ -143,9 +172,7 @@ async function processDailyRow(tokens) {
     const b = normalize(tokens[i + 1]);
 
     let miles = tableLookup(a, b);
-
     if (miles == null) {
-      // fallback API (rare)
       miles = await fallbackLookup(a, b);
     }
 
@@ -156,17 +183,36 @@ async function processDailyRow(tokens) {
   return { total, legs };
 }
 
-// ======================================================
-// UI Handler
-// ======================================================
+function updateSummaryMetrics(dailyTotals) {
+  const validMiles = dailyTotals
+    .map(t => parseFloat(t))
+    .filter(n => !isNaN(n));
 
+  const totalSum = validMiles.reduce((acc, curr) => acc + curr, 0);
+  const rate = parseFloat(rateInput.value) || 0;
+  const payout = totalSum * rate;
+
+  metricDays.textContent = validMiles.length;
+  metricMiles.textContent = totalSum.toFixed(2);
+  metricPayout.textContent = `$${payout.toFixed(2)}`;
+  summaryCard.classList.remove("hidden");
+}
+
+rateInput.addEventListener("input", () => {
+  if (calculatedDailyTotals.length > 0) {
+    updateSummaryMetrics(calculatedDailyTotals);
+  }
+});
+
+// ------------------------------------------------------
+// UI Event Handlers
+// ------------------------------------------------------
 calculateBtn.addEventListener("click", async () => {
   setStatus("Working...");
   resultsDiv.classList.add("hidden");
   legsTableBody.innerHTML = "";
   totalMilesEl.textContent = "";
 
-  // Clear old daily results if any
   if (dailyResultsDiv) dailyResultsDiv.remove();
 
   const rows = inputBox.value
@@ -176,76 +222,91 @@ calculateBtn.addEventListener("click", async () => {
 
   if (!rows.length) {
     setStatus("Paste at least one row.", true);
+    summaryCard.classList.add("hidden");
     return;
   }
 
-  // This will carry breakdowns for each day
   const allBreakdowns = [];
-
-  const dailyTotals = [];
+  calculatedDailyTotals = [];
 
   for (const row of rows) {
+    // Flexible parsing: colons (:), arrows (->), dashes (-), commas (,), or brackets (>)
     const tokens = row
-      .split(":")
+      .split(/[:\->,]+/)
       .map(t => t.trim())
-      .filter(t => t.length);
+      .filter(t => t.length > 0);
 
     if (tokens.length < 2) {
-      dailyTotals.push("0.00");
-      allBreakdowns.push([]); // empty
+      calculatedDailyTotals.push("0.00");
+      allBreakdowns.push([]);
       continue;
     }
 
     try {
       const { total, legs } = await processDailyRow(tokens);
-      dailyTotals.push(formatMiles(total));
+      calculatedDailyTotals.push(formatMiles(total));
       allBreakdowns.push(legs);
-
     } catch (err) {
       console.error(err);
-      dailyTotals.push("ERROR");
+      calculatedDailyTotals.push("ERROR");
       allBreakdowns.push([]);
     }
   }
 
-  // Inject daily totals + Show Breakdown links
+  updateSummaryMetrics(calculatedDailyTotals);
+
   dailyResultsDiv = document.createElement("div");
   dailyResultsDiv.className = "daily-output";
 
   let html = `
-    <h2>Daily Mileage Output</h2>
-    <textarea rows="${dailyTotals.length}"
-      style="width:100%; margin-bottom:1rem;">${dailyTotals.join("\n")}</textarea>
-    <p style="font-size: 0.9rem; margin-top:0;">
-      Copy/paste into Excel
-    </p>
+    <div class="output-header">
+      <h2>Daily Mileage Output</h2>
+      <button id="copyExcelBtn" class="copy-btn">📋 Copy for Excel</button>
+    </div>
+    <textarea id="dailyOutputText" readonly rows="${Math.max(calculatedDailyTotals.length, 3)}"
+      class="output-textarea">${calculatedDailyTotals.join("\n")}</textarea>
+    <p class="copy-note">Paste directly into your reimbursement spreadsheet.</p>
 
-    <h3>Breakdowns</h3>
+    <h3>Day-by-Day Breakdowns</h3>
     <ul class="day-list">
   `;
 
-  dailyTotals.forEach((miles, idx) => {
+  calculatedDailyTotals.forEach((miles, idx) => {
     html += `
-      <li>
-        Day ${idx + 1}: ${miles} miles
+      <li class="day-item">
+        <span><strong>Day ${idx + 1}:</strong> ${miles} miles</span>
         <button class="showBreakdownBtn" data-index="${idx}">
-          Show Breakdown
+          Show Legs
         </button>
       </li>
     `;
   });
 
   html += `</ul>`;
-
   dailyResultsDiv.innerHTML = html;
 
-  document.getElementById("dailyResultsContainer").innerHTML = "";
-  document.getElementById("dailyResultsContainer").appendChild(dailyResultsDiv);
+  const container = document.getElementById("dailyResultsContainer");
+  container.innerHTML = "";
+  container.appendChild(dailyResultsDiv);
+
+  // Wire up Copy Button
+  const copyBtn = document.getElementById("copyExcelBtn");
+  copyBtn.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(calculatedDailyTotals.join("\n"));
+    copyBtn.textContent = "✅ Copied!";
+    copyBtn.classList.add("copied");
+    setTimeout(() => {
+      copyBtn.textContent = "📋 Copy for Excel";
+      copyBtn.classList.remove("copied");
+    }, 2000);
+  });
 
   // Wire up breakdown buttons
   dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(btn => {
     btn.addEventListener("click", () => {
-      const idx = parseInt(btn.dataset.index);
+      dailyResultsDiv.querySelectorAll(".showBreakdownBtn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const idx = parseInt(btn.dataset.index, 10);
       showBreakdownForDay(idx, allBreakdowns);
     });
   });
@@ -261,27 +322,25 @@ function showBreakdownForDay(dayIndex, allBreakdowns) {
     return;
   }
 
-  // Clear previous breakdown
   legsTableBody.innerHTML = "";
-  totalMilesEl.textContent = "";
+  breakdownTitle.textContent = `Route Breakdown — Day ${dayIndex + 1}`;
 
   let total = 0;
-
   legs.forEach((leg, i) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${i + 1}</td>
-      <td>${leg.from}</td>
-      <td>${leg.to}</td>
-      <td>${leg.miles.toFixed(2)}</td>
+      <td><strong>${leg.from}</strong></td>
+      <td><strong>${leg.to}</strong></td>
+      <td style="text-align: right;">${leg.miles.toFixed(2)}</td>
     `;
     legsTableBody.appendChild(row);
     total += leg.miles;
   });
 
-  totalMilesEl.textContent = `Total: ${total.toFixed(2)} miles`;
-
+  totalMilesEl.innerHTML = `Day Total: <strong>${total.toFixed(2)} miles</strong>`;
   resultsDiv.classList.remove("hidden");
+  resultsDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function showGeocodeModal(address, features) {
@@ -293,16 +352,11 @@ function showGeocodeModal(address, features) {
     const btnConfirm = document.getElementById("modalConfirm");
     const btnCancel = document.getElementById("modalCancel");
 
-    // Fill modal
     promptEl.textContent = `Multiple matches for "${address}". Pick one:`;
     selectEl.innerHTML = features
-      .map(
-        (f, i) =>
-          `<option value="${i}">${f.place_name.replace(/,/g, " ·")}</option>`
-      )
+      .map((f, i) => `<option value="${i}">${f.place_name.replace(/,/g, " ·")}</option>`)
       .join("");
 
-    // Show modal
     backdrop.classList.remove("hidden");
     dialog.classList.remove("hidden");
 
@@ -324,6 +378,3 @@ function showGeocodeModal(address, features) {
     };
   });
 }
-
-
-

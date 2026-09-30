@@ -14,33 +14,59 @@
     <!-- INPUT AREA -->
     <h1>Mileage Calculator</h1>
     <p class="subtitle">
-      Paste one workday per line, like:<br>
-      <code>HOME : LS : JACOBS : HOME</code>
+      Paste one workday per line using <code>:</code>, <code>-></code>, or commas:<br>
+      <code>HOME : LS : MERCY : HOME</code>
     </p>
 
+    <!-- QUICK ALIAS CHIP BAR -->
+    <label>Quick Insert Locations:</label>
+    <div id="aliasChips" class="alias-chips"></div>
+
     <label for="locations">Daily Routes (one per line):</label>
-    <textarea id="locations" rows="10"></textarea>
+    <textarea id="locations" rows="8" placeholder="HOME -> LS -> MERCY -> HOME"></textarea>
+
+    <!-- REIMBURSEMENT RATE CONFIG -->
+    <div class="rate-config">
+      <label for="rateInput">Reimbursement Rate ($/mi):</label>
+      <input type="number" id="rateInput" value="0.70" step="0.01" min="0" />
+    </div>
 
     <button id="calculateBtn">Calculate Mileage</button>
 
     <div id="status" class="status"></div>
+
+    <!-- SUMMARY CARD -->
+    <div id="summaryCard" class="summary-card hidden">
+      <div class="summary-metric">
+        <span class="metric-label">Total Days</span>
+        <span id="metricDays" class="metric-value">0</span>
+      </div>
+      <div class="summary-metric">
+        <span class="metric-label">Total Miles</span>
+        <span id="metricMiles" class="metric-value">0.00</span>
+      </div>
+      <div class="summary-metric highlight">
+        <span class="metric-label">Total Payout</span>
+        <span id="metricPayout" class="metric-value">$0.00</span>
+      </div>
+    </div>
 
     <!-- DAILY RESULTS BLOCK (JS fills this) -->
     <div id="dailyResultsContainer"></div>
 
     <!-- BREAKDOWN BLOCK -->
     <div id="results" class="results hidden">
-      <h2>Route Breakdown</h2>
-      <p id="totalMiles"></p>
+      <h2 id="breakdownTitle">Route Breakdown</h2>
+      <p id="totalMiles" class="breakdown-total"></p>
 
       <h3>Legs</h3>
       <table id="legsTable">
         <thead>
           <tr>
-            <th>#</th>
+            <th style="width: 40px;">#</th>
             <th>From</th>
             <th>To</th>
-            <th>Miles</th>
+            <th style="text-align: right;">Miles</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -60,11 +86,10 @@
       <select id="modalSelect"></select>
     
       <div class="modal-buttons">
-        <button id="modalCancel">Cancel</button>
+        <button id="modalCancel" class="btn-secondary">Cancel</button>
         <button id="modalConfirm">Confirm</button>
       </div>
     </div>
-
 
   </div> <!-- END CONTAINER -->
 

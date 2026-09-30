@@ -1,3 +1,3 @@
 // version.js
-export const APP_VERSION = "1.21";
-export const BUILD_DATE = "2026-2-16";
+export const APP_VERSION = "1.30";
+export const BUILD_DATE = "2026-9-30";
